@@ -1,4 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using SmartReminder.Application.DTOs.Tasks;
 using SmartReminder.Application.Interfaces;
 using SmartReminder.Domain.Entities;
 using SmartReminder.Infrastructure.Persistence;
@@ -24,6 +25,38 @@ public class TaskRepository : ITaskRepository
         return await _dbContext.ReminderTasks
             .Include(x => x.Steps)
             .Where(x => x.OwnerUserId == userId)
+            .OrderBy(x => x.DueAtUtc)
+            .ToListAsync();
+    }
+
+    public async Task<List<ReminderTask>> GetFilteredTasksForUserAsync(int userId, TaskFilterRequest filter)
+    {
+        var query = _dbContext.ReminderTasks
+            .Include(x => x.Steps)
+            .Where(x => x.OwnerUserId == userId)
+            .AsQueryable();
+
+        if (filter.Status.HasValue)
+        {
+            query = query.Where(x => x.Status == filter.Status.Value);
+        }
+
+        if (filter.Priority.HasValue)
+        {
+            query = query.Where(x => x.Priority == filter.Priority.Value);
+        }
+
+        if (filter.DueFromUtc.HasValue)
+        {
+            query = query.Where(x => x.DueAtUtc >= filter.DueFromUtc.Value);
+        }
+
+        if (filter.DueToUtc.HasValue)
+        {
+            query = query.Where(x => x.DueAtUtc <= filter.DueToUtc.Value);
+        }
+
+        return await query
             .OrderBy(x => x.DueAtUtc)
             .ToListAsync();
     }

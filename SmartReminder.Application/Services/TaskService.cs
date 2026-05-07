@@ -54,6 +54,15 @@ public class TaskService : ITaskService
             .ToList();
     }
 
+    public async Task<List<TaskResponse>> GetFilteredTasksAsync(int currentUserId, TaskFilterRequest filter)
+    {
+        var tasks = await _taskRepository.GetFilteredTasksForUserAsync(currentUserId, filter);
+
+        return tasks
+            .Select(MapToResponse)
+            .ToList();
+    }
+
     public async Task<TaskResponse> GetTaskByIdAsync(int currentUserId, int taskId)
     {
         var task = await GetOwnedTaskOrThrowAsync(currentUserId, taskId);
@@ -89,6 +98,47 @@ public class TaskService : ITaskService
         {
             step.IsCompleted = true;
             step.UpdatedAtUtc = DateTime.UtcNow;
+        }
+
+        await _taskRepository.SaveChangesAsync();
+    }
+
+    public async Task SnoozeTaskAsync(int currentUserId, int taskId, SnoozeTaskRequest request)
+    {
+        if (request.NewDueAtUtc <= DateTime.UtcNow)
+        {
+            throw new ArgumentException("Snooze time must be in the future.");
+        }
+
+        var task = await GetOwnedTaskOrThrowAsync(currentUserId, taskId);
+
+        task.DueAtUtc = request.NewDueAtUtc;
+        task.Status = ReminderStatus.Snoozed;
+        task.UpdatedAtUtc = DateTime.UtcNow;
+
+        await _taskRepository.SaveChangesAsync();
+    }
+
+    public async Task CompleteTaskStepAsync(int currentUserId, int taskId, int stepId)
+    {
+        var task = await GetOwnedTaskOrThrowAsync(currentUserId, taskId);
+
+        var step = task.Steps.FirstOrDefault(x => x.Id == stepId);
+
+        if (step == null)
+        {
+            throw new KeyNotFoundException("Task step not found.");
+        }
+
+        step.IsCompleted = true;
+        step.UpdatedAtUtc = DateTime.UtcNow;
+
+        var allStepsCompleted = task.Steps.Any() && task.Steps.All(x => x.IsCompleted);
+
+        if (allStepsCompleted)
+        {
+            task.Status = ReminderStatus.Completed;
+            task.UpdatedAtUtc = DateTime.UtcNow;
         }
 
         await _taskRepository.SaveChangesAsync();

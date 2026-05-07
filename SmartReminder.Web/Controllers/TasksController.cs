@@ -43,6 +43,15 @@ public class TasksController : ControllerBase
         return Ok(response);
     }
 
+    [HttpGet("filter")]
+    public async Task<IActionResult> GetFilteredTasks([FromQuery] TaskFilterRequest filter)
+    {
+        var userId = GetCurrentUserId();
+        var response = await _taskService.GetFilteredTasksAsync(userId, filter);
+
+        return Ok(response);
+    }
+
     [HttpGet("{id:int}")]
     public async Task<IActionResult> GetTaskById(int id)
     {
@@ -94,6 +103,50 @@ public class TasksController : ControllerBase
         {
             var userId = GetCurrentUserId();
             await _taskService.CompleteTaskAsync(userId, id);
+
+            return NoContent();
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(new { message = ex.Message });
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            return Forbid(ex.Message);
+        }
+    }
+
+    [HttpPatch("{id:int}/snooze")]
+    public async Task<IActionResult> SnoozeTask(int id, SnoozeTaskRequest request)
+    {
+        try
+        {
+            var userId = GetCurrentUserId();
+            await _taskService.SnoozeTaskAsync(userId, id, request);
+
+            return NoContent();
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(new { message = ex.Message });
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            return Forbid(ex.Message);
+        }
+    }
+
+    [HttpPatch("{taskId:int}/steps/{stepId:int}/complete")]
+    public async Task<IActionResult> CompleteTaskStep(int taskId, int stepId)
+    {
+        try
+        {
+            var userId = GetCurrentUserId();
+            await _taskService.CompleteTaskStepAsync(userId, taskId, stepId);
 
             return NoContent();
         }
