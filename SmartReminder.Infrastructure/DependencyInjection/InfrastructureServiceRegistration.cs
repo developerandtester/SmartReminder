@@ -24,6 +24,7 @@ public static class InfrastructureServiceRegistration
         services.AddScoped<IPasswordHasher, BCryptPasswordHasher>();
         services.AddScoped<IJwtTokenService, JwtTokenService>();
         services.AddScoped<IPomodoroRepository, PomodoroRepository>();
+        services.AddScoped<IVisualScheduleRepository, VisualScheduleRepository>();
 
         return services;
     }
