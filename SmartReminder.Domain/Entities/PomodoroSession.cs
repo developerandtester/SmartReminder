@@ -11,6 +11,8 @@ public class PomodoroSession : BaseEntity
 
     public int FocusDurationMinutes { get; set; } = 25;
 
+    public int ActualFocusMinutes { get; set; }
+
     public int ShortBreakMinutes { get; set; } = 5;
 
     public int LongBreakMinutes { get; set; } = 15;

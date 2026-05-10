@@ -110,10 +110,26 @@ public class PomodoroService : IPomodoroService
             throw new InvalidOperationException("Cancelled Pomodoro session cannot be completed.");
         }
 
+        var completedAtUtc = DateTime.UtcNow;
+
         session.Status = PomodoroStatus.Completed;
-        session.CompletedAtUtc = DateTime.UtcNow;
+        session.CompletedAtUtc = completedAtUtc;
         session.Notes = request.Notes?.Trim();
-        session.UpdatedAtUtc = DateTime.UtcNow;
+        session.UpdatedAtUtc = completedAtUtc;
+
+        if (session.StartedAtUtc.HasValue)
+        {
+            var actualMinutes = (int)Math.Ceiling((completedAtUtc - session.StartedAtUtc.Value).TotalMinutes);
+
+            session.ActualFocusMinutes = Math.Min(
+                Math.Max(actualMinutes, 1),
+                session.FocusDurationMinutes
+            );
+        }
+        else
+        {
+            session.ActualFocusMinutes = 0;
+        }
 
         if (request.MarkLinkedTaskCompleted && session.ReminderTask != null)
         {
@@ -161,10 +177,10 @@ public class PomodoroService : IPomodoroService
             CompletedSessions = completedSessions.Count,
             RunningSessions = sessions.Count(x => x.Status == PomodoroStatus.Running),
             PausedSessions = sessions.Count(x => x.Status == PomodoroStatus.Paused),
-            TotalFocusMinutes = completedSessions.Sum(x => x.FocusDurationMinutes),
+            TotalFocusMinutes = completedSessions.Sum(x => x.ActualFocusMinutes),
             TodayFocusMinutes = completedSessions
-                .Where(x => x.CompletedAtUtc.HasValue && x.CompletedAtUtc.Value.Date == today)
-                .Sum(x => x.FocusDurationMinutes)
+    .Where(x => x.CompletedAtUtc.HasValue && x.CompletedAtUtc.Value.Date == today)
+    .Sum(x => x.ActualFocusMinutes)
         };
     }
 
@@ -216,6 +232,7 @@ public class PomodoroService : IPomodoroService
             UserId = session.UserId,
             ReminderTaskId = session.ReminderTaskId,
             LinkedTaskTitle = session.ReminderTask?.Title,
+            ActualFocusMinutes = session.ActualFocusMinutes,
             FocusDurationMinutes = session.FocusDurationMinutes,
             ShortBreakMinutes = session.ShortBreakMinutes,
             LongBreakMinutes = session.LongBreakMinutes,

@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using SmartReminder.Infrastructure.Persistence;
 
@@ -11,9 +12,11 @@ using SmartReminder.Infrastructure.Persistence;
 namespace SmartReminder.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(SmartReminderDbContext))]
-    partial class SmartReminderDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260510141129_AddActualFocusMinutesToPomodoro")]
+    partial class AddActualFocusMinutesToPomodoro
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder

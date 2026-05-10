@@ -12,6 +12,7 @@ public class PomodoroResponse
 
     public string? LinkedTaskTitle { get; set; }
 
+    public int ActualFocusMinutes { get; set; }
     public int FocusDurationMinutes { get; set; }
 
     public int ShortBreakMinutes { get; set; }
