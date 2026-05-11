@@ -25,6 +25,8 @@ public static class InfrastructureServiceRegistration
         services.AddScoped<IJwtTokenService, JwtTokenService>();
         services.AddScoped<IPomodoroRepository, PomodoroRepository>();
         services.AddScoped<IVisualScheduleRepository, VisualScheduleRepository>();
+        services.AddScoped<IRelationshipRepository, RelationshipRepository>();
+        services.AddScoped<IChatRepository, ChatRepository>();
 
         return services;
     }

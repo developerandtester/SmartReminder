@@ -12,6 +12,8 @@ public static class ApplicationServiceRegistration
         services.AddScoped<ITaskService, TaskService>();
         services.AddScoped<IPomodoroService, PomodoroService>();
         services.AddScoped<IVisualScheduleService, VisualScheduleService>();
+        services.AddScoped<IRelationshipService, RelationshipService>();
+        services.AddScoped<IChatService, ChatService>();
 
         return services;
     }

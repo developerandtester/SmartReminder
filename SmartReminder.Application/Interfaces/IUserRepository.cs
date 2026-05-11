@@ -8,6 +8,8 @@ public interface IUserRepository
 
     Task<AppUser?> GetByEmailAsync(string email);
 
+    Task<AppUser?> GetByIdAsync(int userId);
+
     Task AddAsync(AppUser user);
 
     Task SaveChangesAsync();
