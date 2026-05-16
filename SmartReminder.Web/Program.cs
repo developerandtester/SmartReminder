@@ -4,10 +4,12 @@ using Microsoft.IdentityModel.Tokens;
 using SmartReminder.Application.DependencyInjection;
 using SmartReminder.Infrastructure.DependencyInjection;
 using Microsoft.OpenApi.Models;
+using SmartReminder.Web.Hubs;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers();
+builder.Services.AddSignalR();
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddCors(options =>
@@ -17,7 +19,8 @@ builder.Services.AddCors(options =>
         policy
             .WithOrigins("http://localhost:4200")
             .AllowAnyHeader()
-            .AllowAnyMethod();
+            .AllowAnyMethod()
+            .AllowCredentials();
     });
 });
 builder.Services.AddSwaggerGen(options =>
@@ -85,6 +88,24 @@ builder.Services
             ValidateLifetime = true,
             ClockSkew = TimeSpan.Zero
         };
+
+        options.Events = new JwtBearerEvents
+        {
+            OnMessageReceived = context =>
+            {
+                var accessToken = context.Request.Query["access_token"];
+
+                var path = context.HttpContext.Request.Path;
+
+                if (!string.IsNullOrEmpty(accessToken) &&
+                    path.StartsWithSegments("/hubs/chat"))
+                {
+                    context.Token = accessToken;
+                }
+
+                return Task.CompletedTask;
+            }
+        };
     });
 
 builder.Services.AddAuthorization();
@@ -103,5 +124,6 @@ app.UseAuthentication();
 app.UseAuthorization();
 app.UseCors("AllowAngularDevClient");
 app.MapControllers();
+app.MapHub<ChatHub>("/hubs/chat");
 
 app.Run();

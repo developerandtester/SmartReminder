@@ -6,11 +6,9 @@ public class ConversationResponse
 
     public string Title { get; set; } = string.Empty;
 
-    public string Type { get; set; } = string.Empty;
-
     public List<int> ParticipantUserIds { get; set; } = new();
 
-    public string LastMessage { get; set; } = string.Empty;
+    public string LastMessagePreview { get; set; } = string.Empty;
 
     public DateTime CreatedAtUtc { get; set; }
 }

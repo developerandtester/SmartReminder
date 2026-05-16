@@ -24,6 +24,18 @@ public class ChatRepository : IChatRepository
             .FirstOrDefaultAsync(x => x.Id == conversationId);
     }
 
+    public async Task<Conversation?> GetConversationBetweenUsersAsync(int userId, int otherUserId)
+    {
+        return await _dbContext.Conversations
+            .Include(x => x.Participants)
+                .ThenInclude(x => x.User)
+            .Include(x => x.Messages)
+                .ThenInclude(x => x.SenderUser)
+            .Where(x => x.Participants.Any(p => p.UserId == userId))
+            .Where(x => x.Participants.Any(p => p.UserId == otherUserId))
+            .FirstOrDefaultAsync();
+    }
+
     public async Task<List<Conversation>> GetConversationsForUserAsync(int userId)
     {
         return await _dbContext.Conversations
@@ -32,7 +44,18 @@ public class ChatRepository : IChatRepository
             .Include(x => x.Messages)
                 .ThenInclude(x => x.SenderUser)
             .Where(x => x.Participants.Any(p => p.UserId == userId))
-            .OrderByDescending(x => x.CreatedAtUtc)
+            .OrderByDescending(x => x.Messages.Any()
+                ? x.Messages.Max(m => m.CreatedAtUtc)
+                : x.CreatedAtUtc)
+            .ToListAsync();
+    }
+
+    public async Task<List<ChatMessage>> GetMessagesAsync(int conversationId)
+    {
+        return await _dbContext.ChatMessages
+            .Include(x => x.SenderUser)
+            .Where(x => x.ConversationId == conversationId)
+            .OrderBy(x => x.CreatedAtUtc)
             .ToListAsync();
     }
 
@@ -44,15 +67,6 @@ public class ChatRepository : IChatRepository
     public async Task AddMessageAsync(ChatMessage message)
     {
         await _dbContext.ChatMessages.AddAsync(message);
-    }
-
-    public async Task<List<ChatMessage>> GetMessagesAsync(int conversationId)
-    {
-        return await _dbContext.ChatMessages
-            .Include(x => x.SenderUser)
-            .Where(x => x.ConversationId == conversationId)
-            .OrderBy(x => x.CreatedAtUtc)
-            .ToListAsync();
     }
 
     public async Task SaveChangesAsync()
