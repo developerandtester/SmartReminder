@@ -8,11 +8,20 @@ namespace SmartReminder.Application.Services;
 public class TaskService : ITaskService
 {
     private readonly ITaskRepository _taskRepository;
+    private readonly IUserRepository _userRepository;
+    private readonly IRelationshipRepository _relationshipRepository;
 
-    public TaskService(ITaskRepository taskRepository)
+    public TaskService(
+    ITaskRepository taskRepository,
+    IUserRepository userRepository,
+    IRelationshipRepository relationshipRepository)
     {
         _taskRepository = taskRepository;
+        _userRepository = userRepository;
+        _relationshipRepository = relationshipRepository;
     }
+
+
 
     public async Task<TaskResponse> CreateTaskAsync(int currentUserId, CreateTaskRequest request)
     {
@@ -53,6 +62,8 @@ public class TaskService : ITaskService
             .Select(MapToResponse)
             .ToList();
     }
+
+
 
     public async Task<List<TaskResponse>> GetFilteredTasksAsync(int currentUserId, TaskFilterRequest filter)
     {
@@ -193,6 +204,119 @@ public class TaskService : ITaskService
         if (!Enum.IsDefined(typeof(ReminderPriority), request.Priority))
         {
             throw new ArgumentException("Invalid priority.");
+        }
+    }
+
+    public async Task<TaskResponse> AssignTaskToStudentAsync(
+    int currentUserId,
+    int studentId,
+    AssignTaskToStudentRequest request)
+    {
+        ValidateAssignRequest(request);
+
+        var assigner = await _userRepository.GetByIdAsync(currentUserId);
+
+        if (assigner == null)
+        {
+            throw new KeyNotFoundException("Current user not found.");
+        }
+
+        var student = await _userRepository.GetByIdAsync(studentId);
+
+        if (student == null)
+        {
+            throw new KeyNotFoundException("Student not found.");
+        }
+
+        if (student.Role != UserRole.Student)
+        {
+            throw new InvalidOperationException("Target user is not a student.");
+        }
+
+        var canAssign = await CanAssignTaskToStudentAsync(assigner.Id, student.Id, assigner.Role);
+
+        if (!canAssign)
+        {
+            throw new UnauthorizedAccessException("You are not allowed to assign tasks to this student.");
+        }
+
+        var task = new ReminderTask
+        {
+            OwnerUserId = student.Id,
+            CreatedByUserId = assigner.Id,
+            Title = request.Title.Trim(),
+            Description = request.Description?.Trim(),
+            DueAtUtc = request.DueAtUtc,
+            Priority = request.Priority,
+            Status = ReminderStatus.Pending,
+            IsSuggestedByParentOrTeacher = true,
+            RequiresStudentApproval = false,
+            Steps = request.Steps
+                .Where(step => !string.IsNullOrWhiteSpace(step))
+                .Select((step, index) => new TaskStep
+                {
+                    Title = step.Trim(),
+                    SortOrder = index + 1
+                })
+                .ToList()
+        };
+
+        if (!task.Steps.Any())
+        {
+            throw new ArgumentException("Assigned tasks must have at least one guided step.");
+        }
+
+        await _taskRepository.AddAsync(task);
+        await _taskRepository.SaveChangesAsync();
+
+        return MapToResponse(task);
+    }
+    private async Task<bool> CanAssignTaskToStudentAsync(
+    int assignerId,
+    int studentId,
+    UserRole assignerRole)
+    {
+        if (assignerRole == UserRole.Admin)
+        {
+            return true;
+        }
+
+        if (assignerRole == UserRole.Parent)
+        {
+            var parentLink = await _relationshipRepository.GetParentLinkAsync(studentId, assignerId);
+
+            return parentLink != null &&
+                   parentLink.Status == LinkStatus.Accepted &&
+                   parentLink.CanCreateTasks;
+        }
+
+        if (assignerRole == UserRole.Teacher)
+        {
+            var teacherLink = await _relationshipRepository.GetTeacherLinkAsync(studentId, assignerId);
+
+            return teacherLink != null &&
+                   teacherLink.Status == LinkStatus.Accepted &&
+                   teacherLink.CanCreateTasks;
+        }
+
+        return false;
+    }
+
+    private static void ValidateAssignRequest(AssignTaskToStudentRequest request)
+    {
+        if (string.IsNullOrWhiteSpace(request.Title))
+        {
+            throw new ArgumentException("Task title is required.");
+        }
+
+        if (!Enum.IsDefined(typeof(ReminderPriority), request.Priority))
+        {
+            throw new ArgumentException("Invalid priority.");
+        }
+
+        if (request.Steps == null || request.Steps.All(string.IsNullOrWhiteSpace))
+        {
+            throw new ArgumentException("Assigned guided task must include at least one step.");
         }
     }
 

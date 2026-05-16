@@ -6,6 +6,11 @@ public interface ITaskService
 {
     Task<TaskResponse> CreateTaskAsync(int currentUserId, CreateTaskRequest request);
 
+    Task<TaskResponse> AssignTaskToStudentAsync(
+    int currentUserId,
+    int studentId,
+    AssignTaskToStudentRequest request);
+
     Task<List<TaskResponse>> GetMyTasksAsync(int currentUserId);
 
     Task<List<TaskResponse>> GetFilteredTasksAsync(int currentUserId, TaskFilterRequest filter);

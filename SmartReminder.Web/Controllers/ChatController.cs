@@ -93,6 +93,31 @@ public class ChatController : ControllerBase
         }
     }
 
+    [HttpPost("messages/{messageId:int}/convert-to-task")]
+    public async Task<IActionResult> ConvertMessageToTask(
+    int messageId,
+    ConvertMessageToTaskRequest request)
+    {
+        try
+        {
+            var userId = GetCurrentUserId();
+
+            var taskId = await _chatService.ConvertMessageToTaskAsync(
+                userId,
+                messageId,
+                request);
+
+            return Ok(new
+            {
+                message = "Task created successfully.",
+                taskId
+            });
+        }
+        catch (Exception ex)
+        {
+            return MapException(ex);
+        }
+    }
     private int GetCurrentUserId()
     {
         var userIdValue = User.FindFirstValue(ClaimTypes.NameIdentifier);

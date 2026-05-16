@@ -73,4 +73,19 @@ public class ChatRepository : IChatRepository
     {
         await _dbContext.SaveChangesAsync();
     }
+
+    public async Task<ChatMessage?> GetMessageByIdAsync(int messageId)
+    {
+        return await _dbContext.ChatMessages
+            .Include(x => x.Conversation)
+                .ThenInclude(x => x.Participants)
+            .FirstOrDefaultAsync(x => x.Id == messageId);
+    }
+
+    public Task UpdateMessageAsync(ChatMessage message)
+    {
+        _dbContext.ChatMessages.Update(message);
+
+        return Task.CompletedTask;
+    }
 }

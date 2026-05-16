@@ -9,13 +9,16 @@ public class ChatService : IChatService
 {
     private readonly IChatRepository _chatRepository;
     private readonly IUserRepository _userRepository;
+    private readonly ITaskRepository _taskRepository;
 
     public ChatService(
         IChatRepository chatRepository,
-        IUserRepository userRepository)
+        IUserRepository userRepository,
+        ITaskRepository taskRepository)
     {
         _chatRepository = chatRepository;
         _userRepository = userRepository;
+        _taskRepository = taskRepository;
     }
 
     public async Task<ConversationResponse> StartConversationAsync(
@@ -133,6 +136,63 @@ public class ChatService : IChatService
         return MapMessage(createdMessage);
     }
 
+    public async Task<int> ConvertMessageToTaskAsync(
+    int currentUserId,
+    int messageId,
+    ConvertMessageToTaskRequest request)
+    {
+        var message = await _chatRepository.GetMessageByIdAsync(messageId);
+
+        if (message == null)
+        {
+            throw new KeyNotFoundException("Message not found.");
+        }
+
+        var isParticipant = message.Conversation.Participants
+            .Any(x => x.UserId == currentUserId);
+
+        if (!isParticipant)
+        {
+            throw new UnauthorizedAccessException("You are not part of this conversation.");
+        }
+
+        if (message.CreatedTaskId.HasValue)
+        {
+            throw new InvalidOperationException("Task already created from this message.");
+        }
+
+        var title = !string.IsNullOrWhiteSpace(request.Title)
+            ? request.Title.Trim()
+            : message.MessageText.Length > 60
+                ? message.MessageText.Substring(0, 60)
+                : message.MessageText;
+
+        var task = new ReminderTask
+        {
+            OwnerUserId = currentUserId,
+            CreatedByUserId = currentUserId,
+            Title = title,
+            Description = !string.IsNullOrWhiteSpace(request.Description)
+        ? request.Description.Trim()
+        : message.MessageText,
+            DueAtUtc = request.DueDateUtc ?? DateTime.UtcNow.AddDays(1),
+            Priority = request.HighPriority
+        ? ReminderPriority.High
+        : ReminderPriority.Medium,
+            Status = ReminderStatus.Pending,
+            SourceChatMessageId = message.Id
+        };
+
+        await _taskRepository.AddAsync(task);
+        await _taskRepository.SaveChangesAsync();
+
+        message.CreatedTaskId = task.Id;
+
+        await _chatRepository.UpdateMessageAsync(message);
+        await _chatRepository.SaveChangesAsync();
+
+        return task.Id;
+    }
     private async Task<Conversation> GetConversationForUserOrThrowAsync(
         int currentUserId,
         int conversationId)

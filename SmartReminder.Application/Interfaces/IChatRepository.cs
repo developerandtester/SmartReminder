@@ -17,4 +17,8 @@ public interface IChatRepository
     Task AddMessageAsync(ChatMessage message);
 
     Task SaveChangesAsync();
+
+    Task<ChatMessage?> GetMessageByIdAsync(int messageId);
+
+    Task UpdateMessageAsync(ChatMessage message);
 }

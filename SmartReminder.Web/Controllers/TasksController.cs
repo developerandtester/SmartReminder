@@ -191,4 +191,38 @@ public class TasksController : ControllerBase
 
         return userId;
     }
+
+    [HttpPost("assign-to-student/{studentId:int}")]
+    public async Task<IActionResult> AssignTaskToStudent(
+    int studentId,
+    AssignTaskToStudentRequest request)
+    {
+        try
+        {
+            var userId = GetCurrentUserId();
+
+            var response = await _taskService.AssignTaskToStudentAsync(
+                userId,
+                studentId,
+                request);
+
+            return Ok(response);
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(new { message = ex.Message });
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            return Forbid(ex.Message);
+        }
+    }
 }

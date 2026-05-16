@@ -11,4 +11,6 @@ public interface IChatService
     Task<List<ChatMessageResponse>> GetMessagesAsync(int currentUserId, int conversationId);
 
     Task<ChatMessageResponse> SendMessageAsync(int currentUserId, int conversationId, SendMessageRequest request);
+
+    Task<int> ConvertMessageToTaskAsync(int currentUserId,int messageId, ConvertMessageToTaskRequest request);
 }
